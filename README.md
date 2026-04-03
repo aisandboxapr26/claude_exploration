@@ -1,74 +1,153 @@
-# Claude Code Crash Course 🚀
-![Claude Code Banner](/static/banner.png)
+# Hook Hub 🏢
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/EdenMarco177?style=social)](https://twitter.com/EdenMarco177)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Udemy Course](https://img.shields.io/badge/Claude%20Code%20Udemy%20Course-Coupon%20%2412.99-brightgreen)](https://www.udemy.com/course/claudecode/?referralCode=JAN-2026)
+A Claude Code project demonstrating advanced hook management and organization — centralizing, structuring, and automating hooks for large-scale or team-based workflows.
 
-Welcome to the Claude Code Crash Course! This repository is designed to teach you the fundamentals and advanced concepts of Claude Code, Anthropic's official CLI for AI-powered software development, in a hands-on way.
+## What is Hook Hub? 💡
 
-## What is Claude Code? 💡
+Hook Hub builds on Claude Code's hooks system to provide a centralized framework for managing multiple hooks across different lifecycle events. Instead of scattering hook scripts throughout a project, Hook Hub organizes them into a structured hub that is easy to maintain, extend, and share across teams.
 
-Claude Code is an interactive command-line interface that brings Claude's AI capabilities directly to your development workflow. It helps with code analysis, bug fixing, feature development, refactoring, and workflow automation - all from your terminal.
+## Key Concepts 🔑
 
-## How it Works 🤔
+### Claude Code Hooks
 
-This repository uses a unique branch-based structure for learning:
+Claude Code hooks are shell commands that execute automatically in response to specific lifecycle events:
 
-1.  **Each `project/*` branch covers a specific Claude Code feature or concept.**
-2.  **Within each branch, commits are ordered chronologically.** Follow the commits one by one to learn the topic step-by-step.
+| Event | When It Fires |
+|-------|--------------|
+| `PreToolUse` | Before Claude executes any tool |
+| `PostToolUse` | After Claude executes any tool |
+| `Notification` | When Claude sends a notification |
+| `Stop` | When Claude finishes a response |
+| `SubagentStop` | When a subagent finishes |
 
-Simply check out the branch for the topic you want to learn and walk through the commits!
+Hooks are configured in `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level).
 
-## Available Topics (Branches) 📚
+### What Hook Hub Adds
 
-Here are the topics currently available:
+- **Centralized hook scripts** — all hooks live in one `hooks/` directory
+- **Dispatcher pattern** — a single entry point routes events to the right handler
+- **Modular handlers** — individual scripts for each concern (logging, notifications, validation, etc.)
+- **Shared utilities** — common helpers (timestamps, formatting, alerting) reused across hooks
 
-| Branch | Topic | Description |
-|--------|-------|-------------|
-| `project/custom-commands` | 🔧 Custom Commands | Learn to extend Claude Code with custom functionality like dad joke generators and automated commits |
-| `project/mcp` | 🔗 MCP Integration | Master Model Context Protocol integration with Context7 MCP server |
-| `project/context-engineering-mcp` | ⚡ Fine-Grained MCP Configuration | Optimize context tokens with task-specific MCP configurations using `--mcp-config` flag |
-| `project/subagents` | 🤖 Subagents | Build specialized AI agents within Claude Code like Code Comedy Carl |
-| `project/hooks-notifications` | 🎣 Hooks & Notifications | Automate your workflow with sound notifications and event triggers |
-| `project/hookhub` | 🏢 Hook Hub | Advanced hook management and organization systems |
+## Project Structure 📁
 
-*More topics might be added, so keep an eye out!*
+```
+.
+├── hooks/
+│   ├── dispatcher.sh          # Main entry point — routes events to handlers
+│   ├── pre_tool/
+│   │   ├── validate_input.sh  # Validates tool inputs before execution
+│   │   └── log_request.sh     # Logs all tool requests
+│   ├── post_tool/
+│   │   ├── log_result.sh      # Logs tool results and durations
+│   │   └── notify_slack.sh    # Sends Slack notifications on key events
+│   ├── stop/
+│   │   └── summarize.sh       # Generates a session summary on stop
+│   └── utils/
+│       ├── colors.sh          # Terminal color helpers
+│       ├── timestamp.sh       # ISO timestamp generator
+│       └── notify.sh          # Cross-platform desktop notifications
+├── .claude/
+│   └── settings.json          # Claude Code hook configuration
+└── README.md
+```
 
-## Prerequisites 🛠️
+## How It Works 🤔
 
-Before you start, make sure you have the following installed:
+1. **Claude Code fires a lifecycle event** (e.g., `PostToolUse`).
+2. **The dispatcher receives the event** via stdin as JSON.
+3. **The dispatcher routes** to the appropriate handler(s) in `hooks/post_tool/`.
+4. **Each handler** processes the event independently — logging, notifying, or validating.
 
-*   🤖 Claude Code CLI
-*   📦 Git
-*   🐍 Python (version 3.8 or higher)
-*   📝 Your favorite text editor/IDE
+### Example: `.claude/settings.json`
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/dispatcher.sh post_tool"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/dispatcher.sh stop"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Example: `hooks/dispatcher.sh`
+
+```bash
+#!/bin/bash
+# Reads the event JSON from stdin, routes to handlers in hooks/<event_type>/
+
+EVENT_TYPE="$1"
+EVENT_JSON=$(cat)
+
+HOOKS_DIR="$(dirname "$0")/$EVENT_TYPE"
+
+if [ -d "$HOOKS_DIR" ]; then
+  for handler in "$HOOKS_DIR"/*.sh; do
+    [ -f "$handler" ] && echo "$EVENT_JSON" | bash "$handler"
+  done
+fi
+```
 
 ## Getting Started ▶️
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/emarco177/claude-code-crash-course.git
-    cd claude-code-crash-course
-    ```
-2.  **Choose a topic and check out the branch:**
-    ```bash
-    # Example for the custom commands topic
-    git checkout project/custom-commands
-    ```
-3.  **Follow the commits:** Use `git log --oneline --reverse` to see the chronological list of commits for the branch. Then, use `git checkout <commit_hash>` or your Git client to step through the history and learn.
+1. **Clone the repository and check out this branch:**
+   ```bash
+   git clone https://github.com/emarco177/claude-code-crash-course.git
+   cd claude-code-crash-course
+   git checkout project/hookhub
+   ```
 
-## Contributing 🤝
+2. **Walk through the commits to learn step by step:**
+   ```bash
+   git log --oneline --reverse
+   ```
 
-Contributions are welcome! If you'd like to add a new topic or improve an existing one:
+3. **Run Claude Code in the project directory** — hooks fire automatically as you work.
 
-1.  Fork the repository.
-2.  Create a new branch for your feature following the naming convention: `project/your-claude-code-feature-name`.
-3.  Make your changes, ensuring each commit represents a logical step in the learning process.
-4.  Open a Pull Request against the `main` branch.
+## Prerequisites 🛠️
+
+- Claude Code CLI installed and authenticated
+- `bash` (v4+)
+- Git
+
+## Learning Path 📚
+
+Follow the commits in order to see how Hook Hub is built up incrementally:
+
+1. Bare project with a single inline hook
+2. Extracting hooks into dedicated scripts
+3. Introducing the dispatcher pattern
+4. Adding shared utilities
+5. Building multi-event handlers (logging, Slack, desktop notifications)
+6. Organizing hooks into a full hub structure
+
+## Related Branches 🔗
+
+| Branch | Topic |
+|--------|-------|
+| `project/hooks-notifications` | Intro to hooks — sound notifications and basic event triggers |
+| `project/hookhub` | *(this branch)* Advanced hook management with the Hub pattern |
 
 ## License 📄
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-Happy learning! 🎉
+Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
